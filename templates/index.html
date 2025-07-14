@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Müşteri Dolap Bilgileri Sorgulama</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #results {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            min-height: 50px;
+        }
+        .customer-info {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: bold;
+        }
+        .result-item {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .result-item:last-child {
+            margin-bottom: 0;
+        }
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+            text-align: center;
+        }
+        .info-message {
+            color: #28a745;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Müşteri Dolap Bilgileri Sorgulama</h1>
+        <form id="queryForm">
+            <label for="musteriNo">Müşteri Numarası:</label>
+            <input type="text" id="musteriNo" name="musteriNo" placeholder="Müşteri numarasını girin" required>
+            <button type="submit">Sorgula</button>
+        </form>
+        <div id="results">
+            </div>
+    </div>
+
+    <script>
+        document.getElementById('queryForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Formun varsayılan gönderimini engelle
+
+            const musteriNo = document.getElementById('musteriNo').value;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p class="info-message">Bilgiler yükleniyor...</p>'; // Yükleniyor mesajı
+
+            try {
+                // Backend sunucumuza POST isteği gönderiyoruz
+                const response = await fetch('/sorgula', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `musteriNo=${encodeURIComponent(musteriNo)}`
+                });
+
+                const data = await response.json();
+
+                resultsDiv.innerHTML = ''; // Yükleniyor mesajını temizle
+
+                if (response.ok) {
+                    const customerInfo = document.createElement('p');
+                    customerInfo.className = 'customer-info';
+                    customerInfo.innerHTML = `Müşteri Numarası: <strong>${data.musteri_no}</strong><br>Müşteri Adı: <strong>${data.customer_name}</strong>`;
+                    resultsDiv.appendChild(customerInfo);
+
+                    if (data.dolap_bilgileri && data.dolap_bilgileri.length > 0) {
+                        const dolapHeader = document.createElement('h3');
+                        dolapHeader.textContent = "Dolap Bilgileri:";
+                        resultsDiv.appendChild(dolapHeader);
+                        
+                        data.dolap_bilgileri.forEach(item => {
+                            const p = document.createElement('div');
+                            p.className = 'result-item';
+                            p.innerHTML = `<strong>Barkod:</strong> ${item.barkod_no} <br> <strong>Model:</strong> ${item.model}`;
+                            resultsDiv.appendChild(p);
+                        });
+                    } else {
+                        resultsDiv.innerHTML += `<p class="info-message">Dolap bilgisi bulunamadı.</p>`;
+                    }
+                } else {
+                    // API'den gelen hata mesajını göster
+                    resultsDiv.innerHTML = `<p class="error-message">${data.error || 'Bir hata oluştu.'}</p>`;
+                }
+            } catch (error) {
+                console.error('Sorgulama hatası:', error);
+                resultsDiv.innerHTML = `<p class="error-message">Sunucuya ulaşılamadı veya beklenmeyen bir hata oluştu.</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
